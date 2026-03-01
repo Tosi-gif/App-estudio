@@ -1,31 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:app_estudio/main.dart';
+import 'package:app_estudio/features/auth/data/auth_repository.dart';
+import 'package:app_estudio/features/auth/presentation/sign_in_page.dart';
+
+class _FakeAuthRepository implements AuthRepository {
+  @override
+  Stream<User?> authStateChanges() => const Stream<User?>.empty();
+
+  @override
+  User? get currentUser => null;
+
+  @override
+  Future<UserCredential> signInWithGoogle() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> signOut() async {}
+}
 
 void main() {
-  testWidgets('Shows empty state and opens add dialog', (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(const MyApp());
-    await tester.pump();
+  testWidgets('Sign-in page renders expected UI', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: SignInPage(authRepository: _FakeAuthRepository())),
+    );
 
-    expect(find.text('Horario de Estudio'), findsOneWidget);
-    expect(find.text('No hay horarios aun.\nAgrega uno con el boton +'),
-        findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Nuevo horario'), findsOneWidget);
-    expect(find.text('Materia'), findsOneWidget);
-    expect(find.text('Dia'), findsOneWidget);
+    expect(find.text('Bienvenido a App Estudio'), findsOneWidget);
+    expect(
+      find.text('Inicia sesion con Google para crear tu registro.'),
+      findsOneWidget,
+    );
+    expect(find.text('Continuar con Google'), findsOneWidget);
   });
 }
