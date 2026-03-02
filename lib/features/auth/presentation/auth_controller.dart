@@ -44,8 +44,17 @@ class AuthController extends ChangeNotifier {
   }
 
   String _mapGoogleSignInError(GoogleSignInException error) {
+    final details = error.description?.trim();
+    final detailsLower = (details ?? '').toLowerCase();
+
     switch (error.code) {
       case GoogleSignInExceptionCode.canceled:
+        if (detailsLower.contains('account reauth failed')) {
+          return 'Google no pudo revalidar la cuenta en este dispositivo. Prueba cerrar sesion de Google en el movil y volver a iniciar.';
+        }
+        if (details != null && details.isNotEmpty) {
+          return 'Inicio de sesion cancelado: $details';
+        }
         return 'Inicio de sesion cancelado.';
       case GoogleSignInExceptionCode.clientConfigurationError:
         return 'Error de configuracion de Google Sign-In. Revisa SHA-1/SHA-256 y google-services.json.';
@@ -54,7 +63,6 @@ class AuthController extends ChangeNotifier {
       case GoogleSignInExceptionCode.uiUnavailable:
         return 'No se pudo mostrar la pantalla de Google Sign-In.';
       default:
-        final details = error.description?.trim();
         if (details != null && details.isNotEmpty) {
           return 'Error de Google Sign-In: $details';
         }

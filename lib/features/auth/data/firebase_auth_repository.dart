@@ -27,13 +27,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<UserCredential> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.authenticate();
-    final googleAuth = googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-    );
-
-    final authResult = await _firebaseAuth.signInWithCredential(credential);
+    final authResult = await _signInWithGoogleCredentialWithRetry();
     final user = authResult.user;
     if (user != null) {
       await _firestore.collection('users').doc(user.uid).set({
@@ -51,5 +45,35 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _firebaseAuth.signOut();
+  }
+
+  Future<UserCredential> _signInWithGoogleCredentialWithRetry() async {
+    try {
+      return await _signInWithGoogleCredential();
+    } on GoogleSignInException catch (e) {
+      final description = (e.description ?? '').toLowerCase();
+      final isReauthFailure =
+          e.code == GoogleSignInExceptionCode.canceled &&
+          description.contains('account reauth failed');
+
+      if (!isReauthFailure) rethrow;
+
+      // Some Android devices return canceled [16] when the cached account
+      // session is stale. Disconnect and retry once.
+      try {
+        await _googleSignIn.disconnect();
+      } catch (_) {}
+
+      return _signInWithGoogleCredential();
+    }
+  }
+
+  Future<UserCredential> _signInWithGoogleCredential() async {
+    final googleUser = await _googleSignIn.authenticate();
+    final googleAuth = googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+    );
+    return _firebaseAuth.signInWithCredential(credential);
   }
 }
