@@ -18,6 +18,41 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<UserCredential> signInAnonymously() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserCredential> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserCredential> createUserWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> sendPhoneCode({
+    required String phoneNumber,
+    required void Function(String verificationId) onCodeSent,
+  }) async {}
+
+  @override
+  Future<UserCredential> verifyPhoneCode({
+    required String verificationId,
+    required String smsCode,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<void> signOut() async {}
 }
 
@@ -29,7 +64,7 @@ void main() {
 
     expect(find.text('Bienvenido a App Estudio'), findsOneWidget);
     expect(
-      find.text('Inicia sesion con Google para crear tu registro.'),
+      find.text('Inicia sesion con Google, Email, Telefono o Anonimo.'),
       findsOneWidget,
     );
     expect(find.text('Continuar con Google'), findsOneWidget);
