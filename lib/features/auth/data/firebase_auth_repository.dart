@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_repository.dart';
@@ -27,7 +28,26 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<UserCredential> signInWithGoogle() async {
-    final authResult = await _signInWithGoogleCredentialWithRetry();
+    late final UserCredential authResult;
+    try {
+      authResult = await _signInWithGoogleCredentialWithRetry();
+    } on GoogleSignInException catch (e) {
+      final description = (e.description ?? '').toLowerCase();
+      final isReauthFailure =
+          e.code == GoogleSignInExceptionCode.canceled &&
+          description.contains('account reauth failed');
+
+      final isNativeMobile = !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS);
+
+      if (!isReauthFailure || !isNativeMobile) rethrow;
+
+      // Fallback native auth flow from FirebaseAuth when google_sign_in
+      // cannot revalidate the account session in the device.
+      authResult = await _firebaseAuth.signInWithProvider(GoogleAuthProvider());
+    }
+
     final user = authResult.user;
     if (user != null) {
       await _firestore.collection('users').doc(user.uid).set({
