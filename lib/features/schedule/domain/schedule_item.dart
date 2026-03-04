@@ -42,6 +42,10 @@ class ScheduleItem {
 
   String get startLabel => _formatTime(startHour, startMinute);
   String get endLabel => _formatTime(endHour, endMinute);
+  String formattedStart({required bool use24HourFormat}) =>
+      _formatTime(startHour, startMinute, use24HourFormat: use24HourFormat);
+  String formattedEnd({required bool use24HourFormat}) =>
+      _formatTime(endHour, endMinute, use24HourFormat: use24HourFormat);
 
   Map<String, dynamic> toJson() {
     return {
@@ -69,7 +73,17 @@ class ScheduleItem {
     );
   }
 
-  static String _formatTime(int hour, int minute) {
+  static String _formatTime(
+    int hour,
+    int minute, {
+    bool use24HourFormat = true,
+  }) {
+    if (!use24HourFormat) {
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final normalized = hour % 12 == 0 ? 12 : hour % 12;
+      final m = minute.toString().padLeft(2, '0');
+      return '$normalized:$m $period';
+    }
     final h = hour.toString().padLeft(2, '0');
     final m = minute.toString().padLeft(2, '0');
     return '$h:$m';

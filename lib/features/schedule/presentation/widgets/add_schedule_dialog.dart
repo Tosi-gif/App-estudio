@@ -5,6 +5,7 @@ import '../../domain/schedule_item.dart';
 Future<ScheduleItem?> showAddScheduleDialog({
   required BuildContext context,
   required List<String> days,
+  required bool use24HourFormat,
 }) {
   String selectedDay = days.first;
   TimeOfDay? startTime;
@@ -19,6 +20,13 @@ Future<ScheduleItem?> showAddScheduleDialog({
     final picked = await showTimePicker(
       context: dialogContext,
       initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(alwaysUse24HourFormat: use24HourFormat),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
     if (!dialogContext.mounted || picked == null) return;
     if (isStart) {
@@ -93,7 +101,10 @@ Future<ScheduleItem?> showAddScheduleDialog({
                           label: Text(
                             startTime == null
                                 ? 'Hora inicio'
-                                : startTime!.format(dialogContext),
+                                : _formatPickedTime(
+                                    startTime!,
+                                    use24HourFormat: use24HourFormat,
+                                  ),
                           ),
                         ),
                       ),
@@ -112,7 +123,10 @@ Future<ScheduleItem?> showAddScheduleDialog({
                           label: Text(
                             endTime == null
                                 ? 'Hora fin'
-                                : endTime!.format(dialogContext),
+                                : _formatPickedTime(
+                                    endTime!,
+                                    use24HourFormat: use24HourFormat,
+                                  ),
                           ),
                         ),
                       ),
@@ -174,4 +188,19 @@ Future<ScheduleItem?> showAddScheduleDialog({
       );
     },
   );
+}
+
+String _formatPickedTime(
+  TimeOfDay value, {
+  required bool use24HourFormat,
+}) {
+  final hour = value.hour;
+  final minute = value.minute.toString().padLeft(2, '0');
+  if (use24HourFormat) {
+    final h = hour.toString().padLeft(2, '0');
+    return '$h:$minute';
+  }
+  final period = hour >= 12 ? 'PM' : 'AM';
+  final normalizedHour = hour % 12 == 0 ? 12 : hour % 12;
+  return '$normalizedHour:$minute $period';
 }

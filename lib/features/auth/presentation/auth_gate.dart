@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../app/app_settings.dart';
 import '../../schedule/data/schedule_repository.dart';
 import '../../schedule/presentation/home_page.dart';
 import '../data/auth_repository.dart';
@@ -11,10 +12,14 @@ class AuthGate extends StatelessWidget {
     super.key,
     required this.authRepository,
     required this.scheduleRepository,
+    required this.settings,
+    required this.onSettingsChanged,
   });
 
   final AuthRepository authRepository;
   final ScheduleRepository scheduleRepository;
+  final AppSettings settings;
+  final ValueChanged<AppSettings> onSettingsChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +41,8 @@ class AuthGate extends StatelessWidget {
           user: user,
           authRepository: authRepository,
           scheduleRepository: scheduleRepository,
+          settings: settings,
+          onSettingsChanged: onSettingsChanged,
         );
       },
     );
