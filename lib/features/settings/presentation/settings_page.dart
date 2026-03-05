@@ -86,15 +86,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 12),
           SwitchListTile(
-            title: const Text('Notificaciones'),
-            subtitle: const Text('Activa o desactiva los recordatorios'),
-            value: _current.notificationsEnabled,
-            onChanged: (value) {
-              _apply(_current.copyWith(notificationsEnabled: value));
-            },
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
             title: const Text('Formato 24 horas'),
             value: _current.use24HourFormat,
             onChanged: (value) {
@@ -117,10 +108,40 @@ class _SettingsPageState extends State<SettingsPage> {
                 value: AppTextSize.large,
                 child: Text('Grande'),
               ),
+              DropdownMenuItem(
+                value: AppTextSize.extraLarge,
+                child: Text('Extra grande'),
+              ),
             ],
             onChanged: (value) {
               if (value == null) return;
               _apply(_current.copyWith(textSize: value));
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<AppSortCriterion>(
+            initialValue: _current.sortCriterion,
+            decoration: const InputDecoration(
+              labelText: 'Ordenar tareas por',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: AppSortCriterion.date,
+                child: Text('Fecha'),
+              ),
+              DropdownMenuItem(
+                value: AppSortCriterion.priority,
+                child: Text('Prioridad'),
+              ),
+              DropdownMenuItem(
+                value: AppSortCriterion.subject,
+                child: Text('Materia'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              _apply(_current.copyWith(sortCriterion: value));
             },
           ),
           const SizedBox(height: 16),

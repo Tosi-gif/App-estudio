@@ -4,14 +4,22 @@ import '../../domain/schedule_item.dart';
 
 Future<ScheduleItem?> showAddScheduleDialog({
   required BuildContext context,
-  required List<String> days,
   required bool use24HourFormat,
+  ScheduleItem? initialItem,
 }) {
-  String selectedDay = days.first;
-  TimeOfDay? startTime;
-  TimeOfDay? endTime;
-  String subject = '';
-  String notes = '';
+  final isEditing = initialItem != null;
+  DateTime? selectedDate = initialItem != null
+      ? (ScheduleItem.tryParseIsoDate(initialItem.day) ?? DateTime.now())
+      : null;
+  TimeOfDay? startTime = initialItem != null
+      ? TimeOfDay(hour: initialItem.startHour, minute: initialItem.startMinute)
+      : null;
+  TimeOfDay? endTime = initialItem != null
+      ? TimeOfDay(hour: initialItem.endHour, minute: initialItem.endMinute)
+      : null;
+  String subject = initialItem?.subject ?? '';
+  String notes = initialItem?.notes ?? '';
+  String priority = initialItem?.priority ?? 'media';
 
   Future<void> pickTime({
     required BuildContext dialogContext,
@@ -48,12 +56,13 @@ Future<ScheduleItem?> showAddScheduleDialog({
       return StatefulBuilder(
         builder: (dialogContext, setDialogState) {
           return AlertDialog(
-            title: const Text('Nuevo horario'),
+            title: Text(isEditing ? 'Editar tarea' : 'Nuevo horario'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
+                  TextFormField(
+                    initialValue: subject,
                     onChanged: (value) {
                       subject = value.trim();
                     },
@@ -64,24 +73,44 @@ Future<ScheduleItem?> showAddScheduleDialog({
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: selectedDay,
-                    items: days
-                        .map(
-                          (day) => DropdownMenuItem<String>(
-                            value: day,
-                            child: Text(day),
-                          ),
-                        )
-                        .toList(),
+                    initialValue: priority,
+                    decoration: const InputDecoration(
+                      labelText: 'Prioridad',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'alta', child: Text('Alta')),
+                      DropdownMenuItem(value: 'media', child: Text('Media')),
+                      DropdownMenuItem(value: 'baja', child: Text('Baja')),
+                    ],
                     onChanged: (value) {
                       if (value == null) return;
                       setDialogState(() {
-                        selectedDay = value;
+                        priority = value;
                       });
                     },
-                    decoration: const InputDecoration(
-                      labelText: 'Dia',
-                      border: OutlineInputBorder(),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final picked = await showDatePicker(
+                        context: dialogContext,
+                        firstDate: DateTime(now.year - 1),
+                        lastDate: DateTime(now.year + 3),
+                        initialDate: selectedDate ?? now,
+                        helpText: 'Selecciona el dia',
+                      );
+                      if (!dialogContext.mounted || picked == null) return;
+                      setDialogState(() {
+                        selectedDate = picked;
+                      });
+                    },
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      selectedDate == null
+                          ? 'Dia del mes'
+                          : _formatDate(selectedDate!),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -133,7 +162,8 @@ Future<ScheduleItem?> showAddScheduleDialog({
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextField(
+                  TextFormField(
+                    initialValue: notes,
                     onChanged: (value) {
                       notes = value.trim();
                     },
@@ -161,6 +191,10 @@ Future<ScheduleItem?> showAddScheduleDialog({
                     showError('Selecciona hora inicio y fin.');
                     return;
                   }
+                  if (selectedDate == null) {
+                    showError('Selecciona un dia del mes.');
+                    return;
+                  }
                   final startMinutes = startTime!.hour * 60 + startTime!.minute;
                   final endMinutes = endTime!.hour * 60 + endTime!.minute;
                   if (endMinutes <= startMinutes) {
@@ -168,19 +202,34 @@ Future<ScheduleItem?> showAddScheduleDialog({
                     return;
                   }
                   FocusManager.instance.primaryFocus?.unfocus();
+                  if (isEditing) {
+                    Navigator.of(dialogContext).pop(
+                      initialItem.copyWith(
+                        subject: subject,
+                        day: ScheduleItem.toIsoDate(selectedDate!),
+                        startHour: startTime!.hour,
+                        startMinute: startTime!.minute,
+                        endHour: endTime!.hour,
+                        endMinute: endTime!.minute,
+                        notes: notes,
+                        priority: priority,
+                      ),
+                    );
+                    return;
+                  }
                   Navigator.of(dialogContext).pop(
                     ScheduleItem.create(
                       subject: subject,
-                      day: selectedDay,
+                      day: ScheduleItem.toIsoDate(selectedDate!),
                       startHour: startTime!.hour,
                       startMinute: startTime!.minute,
                       endHour: endTime!.hour,
                       endMinute: endTime!.minute,
                       notes: notes,
-                    ),
+                    ).copyWith(priority: priority),
                   );
                 },
-                child: const Text('Guardar'),
+                child: Text(isEditing ? 'Actualizar' : 'Guardar'),
               ),
             ],
           );
@@ -203,4 +252,10 @@ String _formatPickedTime(
   final period = hour >= 12 ? 'PM' : 'AM';
   final normalizedHour = hour % 12 == 0 ? 12 : hour % 12;
   return '$normalizedHour:$minute $period';
+}
+
+String _formatDate(DateTime value) {
+  final day = value.day.toString().padLeft(2, '0');
+  final month = value.month.toString().padLeft(2, '0');
+  return '$day/$month/${value.year}';
 }
