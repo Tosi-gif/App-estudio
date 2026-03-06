@@ -1,12 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+import '../../notifications/data/notification_service.dart';
 import '../data/schedule_repository.dart';
 import '../domain/schedule_item.dart';
 
 class ScheduleController extends ChangeNotifier {
-  ScheduleController(this._repository);
+  ScheduleController(
+    this._repository, {
+    NotificationService? notificationService,
+  }) : _notificationService = notificationService ?? NotificationService.instance;
 
   final ScheduleRepository _repository;
+  final NotificationService _notificationService;
   final List<ScheduleItem> _items = <ScheduleItem>[];
   bool _isLoading = true;
 
@@ -18,6 +23,8 @@ class ScheduleController extends ChangeNotifier {
     _items
       ..clear()
       ..addAll(loaded);
+    final pendingItems = _items.where((item) => !item.isCompleted).toList();
+    await _notificationService.syncTaskEndAlarms(pendingItems);
     _isLoading = false;
     notifyListeners();
   }
@@ -26,6 +33,9 @@ class ScheduleController extends ChangeNotifier {
     _items.add(item);
     notifyListeners();
     await _repository.saveSchedules(_items);
+    if (!item.isCompleted) {
+      await _notificationService.scheduleTaskEnd(item);
+    }
   }
 
   Future<void> updateItem(ScheduleItem updatedItem) async {
@@ -34,18 +44,24 @@ class ScheduleController extends ChangeNotifier {
     _items[index] = updatedItem;
     notifyListeners();
     await _repository.saveSchedules(_items);
+    await _notificationService.cancelForItem(updatedItem.id);
+    if (!updatedItem.isCompleted) {
+      await _notificationService.scheduleTaskEnd(updatedItem);
+    }
   }
 
   Future<void> deleteItem(String itemId) async {
     _items.removeWhere((item) => item.id == itemId);
     notifyListeners();
     await _repository.saveSchedules(_items);
+    await _notificationService.cancelForItem(itemId);
   }
 
   Future<void> clearAllItems() async {
     _items.clear();
     notifyListeners();
     await _repository.saveSchedules(_items);
+    await _notificationService.cancelAll();
   }
 
   Future<void> setCompleted(String itemId, bool completed) async {
@@ -60,5 +76,10 @@ class ScheduleController extends ChangeNotifier {
     _items[index] = updated;
     notifyListeners();
     await _repository.saveSchedules(_items);
+    if (completed) {
+      await _notificationService.cancelForItem(itemId);
+      return;
+    }
+    await _notificationService.scheduleTaskEnd(updated);
   }
 }
